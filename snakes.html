@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蛇梯棋</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI','Microsoft YaHei',sans-serif;
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  min-height:100vh;color:#e0e0ff;
+}
+
+/* ── Screen system ── */
+.hidden{display:none!important}
+.screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#sGame{justify-content:flex-start;padding-top:16px}
+
+/* ── Menu ── */
+.menu-box{display:flex;flex-direction:column;align-items:center;gap:20px;max-width:380px;width:100%;text-align:center}
+.menu-box h1{font-size:2.4rem;letter-spacing:3px;text-shadow:0 0 20px rgba(140,160,255,.7);line-height:1.3}
+.menu-box h1 small{font-size:1rem;letter-spacing:1px;color:rgba(255,255,255,.6);display:block;margin-top:4px}
+.btn-lg{
+  width:100%;padding:18px;border:none;border-radius:12px;
+  font-size:1.1rem;font-weight:bold;cursor:pointer;
+  line-height:1.5;letter-spacing:1px;transition:all .15s;color:#fff;
+}
+.btn-lg span{font-size:.8rem;font-weight:normal;opacity:.85;display:block}
+.btn-lg:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.btn-lg:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn-green{background:linear-gradient(135deg,#16a34a,#15803d)}
+.btn-blue{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+
+/* ── Lobby ── */
+.lobby-box{
+  background:rgba(255,255,255,.07);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.15);border-radius:16px;
+  padding:28px;max-width:420px;width:100%;
+}
+.lobby-box h2{text-align:center;font-size:1.5rem;margin-bottom:20px}
+.lobby-sec{margin-bottom:16px}
+.lobby-sec p{font-size:.88rem;color:rgba(255,255,255,.65);margin-bottom:10px}
+.divider{text-align:center;color:rgba(255,255,255,.35);margin:14px 0;font-size:.85rem}
+.big-code{
+  font-size:2.4rem;font-weight:bold;letter-spacing:8px;text-align:center;
+  color:#a5b4fc;background:rgba(0,0,0,.3);border-radius:8px;
+  padding:10px 0;margin:8px 0 6px;user-select:all;
+}
+.waiting-txt{text-align:center;font-size:.9rem;color:#fbbf24;margin-top:4px}
+.code-input{
+  width:100%;padding:12px;font-size:1.2rem;letter-spacing:6px;text-align:center;
+  background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  color:#fff;margin-bottom:10px;outline:none;font-weight:bold;
+}
+.code-input:focus{border-color:#7c3aed;box-shadow:0 0 0 2px rgba(124,58,237,.3)}
+.msg-txt{font-size:.85rem;color:#fca5a5;margin-top:6px;text-align:center;min-height:18px}
+.btn-back{
+  width:100%;padding:10px;background:transparent;color:rgba(255,255,255,.6);
+  border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  cursor:pointer;font-size:.9rem;transition:all .15s;margin-top:10px;
+}
+.btn-back:hover{background:rgba(255,255,255,.08);color:#fff}
+
+/* ── Game header ── */
+.game-header{
+  width:100%;max-width:940px;display:flex;justify-content:space-between;
+  align-items:center;padding:0 0 14px;
+}
+.mode-tag{font-size:.95rem;color:rgba(255,255,255,.75);font-weight:bold}
+.btn-sm{
+  padding:8px 14px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .15s;
+}
+.btn-sm:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* ── Board ── */
+.game-container{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrapper{position:relative;flex-shrink:0}
+.board{
+  display:grid;
+  grid-template-columns:repeat(10,64px);
+  grid-template-rows:repeat(10,64px);
+  border:3px solid rgba(255,255,255,.25);
+  border-radius:6px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.55);
+}
+.board-svg{position:absolute;top:3px;left:3px;pointer-events:none;z-index:4}
+.cell{
+  width:64px;height:64px;
+  border:1px solid rgba(255,255,255,.1);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.cell.ev{background:#1e1b4b}
+.cell.od{background:#2a2760}
+.cell.ls{background:#14532d!important}
+.cell.ss{background:#7f1d1d!important}
+.cell.fc{background:#78350f!important}
+.cell.sc{background:#1e3a5f!important}
+.cell .n{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);position:absolute;top:3px;left:4px;line-height:1}
+.cell .ico{font-size:22px;line-height:1;margin-top:2px}
+.cell .lbl{font-size:9.5px;font-weight:700;color:#fff;background:rgba(0,0,0,.38);border-radius:3px;padding:1px 4px;margin-top:2px}
+.cell .sub{font-size:9px;color:rgba(255,255,255,.75);margin-top:1px}
+.tok{
+  position:absolute;width:20px;height:20px;border-radius:50%;
+  border:2px solid #fff;display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:bold;color:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.5);z-index:10;
+}
+.tok1{background:#ef4444;bottom:4px;left:4px}
+.tok2{background:#3b82f6;bottom:4px;right:4px}
+
+/* ── Panel ── */
+.panel{width:235px;display:flex;flex-direction:column;gap:11px}
+.card{
+  background:rgba(255,255,255,.07);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.13);border-radius:10px;padding:13px;
+}
+.player-card h3{font-size:.95rem;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.player-card .big{font-size:2rem;font-weight:bold;text-align:center;color:#a5b4fc}
+.player-card.active{border-color:gold;box-shadow:0 0 12px rgba(255,215,0,.28)}
+.dice-area{text-align:center}
+.dice{font-size:62px;display:block;line-height:1.1;margin:2px 0 6px}
+.turn-txt{font-size:.82rem;color:rgba(255,255,255,.65);margin-bottom:6px}
+.roll-btn{
+  width:100%;padding:11px;font-size:1rem;font-weight:bold;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  color:#fff;border:none;border-radius:8px;cursor:pointer;
+  letter-spacing:1px;transition:all .15s;
+}
+.roll-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 15px rgba(124,58,237,.5)}
+.roll-btn:disabled{opacity:.42;cursor:not-allowed;transform:none}
+.log-card{max-height:175px;overflow-y:auto}
+.log-card h4,.legend h4{font-size:.78rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.le{font-size:.8rem;padding:3px 6px;border-radius:4px;margin:3px 0;line-height:1.4}
+.lm{color:#bfdbfe}
+.ll{color:#86efac;background:rgba(74,222,128,.07)}
+.ls-log{color:#fca5a5;background:rgba(248,113,113,.07)}
+.lw{color:#fde68a;background:rgba(253,224,71,.1);font-weight:bold}
+.legend{font-size:.8rem}
+.li{display:flex;align-items:center;gap:8px;padding:3px 0}
+.ld{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.reset-btn{
+  width:100%;padding:9px;background:transparent;color:rgba(255,255,255,.6);
+  border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  cursor:pointer;font-size:.88rem;transition:all .15s;
+}
+.reset-btn:hover{background:rgba(255,255,255,.09);color:#fff}
+</style>
+</head>
+<body>
+
+<!-- ══ 主菜单 ══ -->
+<div id="sMenu" class="screen">
+  <div class="menu-box">
+    <h1>🐍 蛇梯棋<small>Snakes &amp; Ladders</small></h1>
+    <button id="btnLocal" class="btn-lg btn-green">🎮 单机模式<span>与 AI 对战</span></button>
+    <button id="btnOnline" class="btn-lg btn-blue">🌐 联机模式<span>在线双人对战</span></button>
+  </div>
+</div>
+
+<!-- ══ 联机大厅 ══ -->
+<div id="sLobby" class="screen hidden">
+  <div class="lobby-box">
+    <h2>🌐 联机模式</h2>
+    <div class="lobby-sec">
+      <p>📋 创建新房间，将房间码分享给朋友</p>
+      <button id="btnCreate" class="btn-lg btn-green">创建房间</button>
+      <div id="waitBox" class="hidden" style="margin-top:12px">
+        <div style="font-size:.82rem;color:rgba(255,255,255,.55);text-align:center;margin-bottom:4px">房间码（点击可复制）</div>
+        <div id="codeShow" class="big-code" title="点击复制">------</div>
+        <div class="waiting-txt">⏳ 等待对手加入…</div>
+      </div>
+      <div id="createMsg" class="msg-txt"></div>
+    </div>
+    <div class="divider">── 或者 ──</div>
+    <div class="lobby-sec">
+      <p>🔗 输入对手的房间码加入游戏</p>
+      <input id="codeInput" class="code-input" placeholder="输入 6 位房间码"
+             maxlength="6" autocomplete="off" spellcheck="false">
+      <button id="btnJoin" class="btn-lg btn-blue">加入房间</button>
+      <div id="joinMsg" class="msg-txt"></div>
+    </div>
+    <button id="btnBackMenu" class="btn-back">← 返回主菜单</button>
+  </div>
+</div>
+
+<!-- ══ 游戏界面 ══ -->
+<div id="sGame" class="screen hidden">
+  <div class="game-header">
+    <span id="gameMode" class="mode-tag">🎮 单机模式</span>
+    <button id="btnBackGame" class="btn-sm">← 返回</button>
+  </div>
+  <div class="game-container">
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+      <svg class="board-svg" id="svg" width="640" height="640"></svg>
+    </div>
+    <div class="panel">
+      <div class="card player-card" id="c0">
+        <h3><span style="color:#ef4444;font-size:1.1em">●</span> <span id="pname0">玩家一</span></h3>
+        <div class="big" id="p0">起点</div>
+      </div>
+      <div class="card player-card" id="c1">
+        <h3><span style="color:#3b82f6;font-size:1.1em">●</span> <span id="pname1">🤖 AI</span></h3>
+        <div class="big" id="p1">起点</div>
+      </div>
+      <div class="card dice-area">
+        <span class="dice" id="dice">🎲</span>
+        <div class="turn-txt" id="turnTxt">轮到：玩家一</div>
+        <button class="roll-btn" id="rollBtn">掷　骰　子</button>
+      </div>
+      <div class="card log-card" id="log"><h4>游戏记录</h4></div>
+      <div class="card legend">
+        <h4>图例说明</h4>
+        <div class="li"><div class="ld" style="background:#14532d"></div><span>🪜 梯子起点 → 向上升格</span></div>
+        <div class="li"><div class="ld" style="background:#7f1d1d"></div><span>🐍 蛇头 → 向下滑落</span></div>
+        <div class="li"><div class="ld" style="background:#78350f"></div><span>🏆 终点（第 100 格）</span></div>
+        <div class="li"><div class="ld" style="background:#1e3a5f"></div><span>🚩 起点（第 1 格）</span></div>
+      </div>
+      <button class="reset-btn" id="resetBtn">🔄 重新开始</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc,
+         onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+/* ── Firebase 初始化 ── */
+const FB = initializeApp({
+  apiKey:    "AIzaSyBgOmn6lQi3kEz-y_nW-fWitl1jOf0OEaE",
+  authDomain:"gandengyan-6914b.firebaseapp.com",
+  projectId: "gandengyan-6914b",
+  appId:     "1:1059444574754:web:37038b54a97c84f8ca587b"
+});
+const db = getFirestore(FB);
+
+/* ── 常量（与原版完全一致）── */
+const LADDERS    = {4:14,9:31,20:38,28:84,40:59,51:67,63:81,71:91};
+const SNAKES     = {17:7,54:34,62:19,64:60,87:24,93:73,95:75,99:78};
+const CS         = 64;
+const DICE_FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+
+/* ── 运行状态 ── */
+let mode    = 'local'; // 'local' | 'online'
+let myRole  = 0;       // 0 = 玩家一/房主  1 = 玩家二/加入者
+let roomId  = null;
+let unsub   = null;    // Firestore 监听器取消函数
+let rolling = false;   // 防重复掷骰
+let G       = {pos:[0,0], cur:0, over:false};
+
+/* ── 屏幕切换 ── */
+function showScreen(id){
+  ['sMenu','sLobby','sGame'].forEach(s =>
+    document.getElementById(s).classList.toggle('hidden', s !== id)
+  );
+}
+
+/* ── 玩家会话 ID（防止同一玩家重复进房）── */
+function getPid(){
+  let v = sessionStorage.getItem('_pid');
+  if(!v){ v = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('_pid',v); }
+  return v;
+}
+
+/* ════════════════════════════════
+   单机模式
+════════════════════════════════ */
+function startLocal(){
+  mode = 'local'; myRole = 0; roomId = null;
+  if(unsub){ unsub(); unsub = null; }
+  document.getElementById('pname0').textContent  = '玩家一';
+  document.getElementById('pname1').textContent  = '🤖 AI';
+  document.getElementById('gameMode').textContent = '🎮 单机模式';
+  resetGame();
+  showScreen('sGame');
+}
+
+/* ════════════════════════════════
+   联机模式 — 房间管理
+════════════════════════════════ */
+
+/* 生成 6 位房间码（去掉易混淆字符）*/
+function genCode(){
+  return Array.from({length:6},
+    ()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]
+  ).join('');
+}
+
+/* 创建房间 */
+async function createRoom(){
+  const code = genCode();
+  roomId = code; myRole = 0;
+  document.getElementById('btnCreate').disabled  = true;
+  document.getElementById('createMsg').textContent = '';
+  try{
+    await setDoc(doc(db,'rooms',code),{
+      h:getPid(), g:null,
+      pos:[0,0], cur:0, over:false, roll:0,
+      status:'waiting'
+    });
+    document.getElementById('codeShow').textContent = code;
+    document.getElementById('waitBox').classList.remove('hidden');
+
+    // 监听对手加入
+    unsub = onSnapshot(doc(db,'rooms',code), snap => {
+      const d = snap.data();
+      if(d && d.g && d.status === 'playing'){
+        unsub(); unsub = null;
+        document.getElementById('pname0').textContent  = '玩家一（我）';
+        document.getElementById('pname1').textContent  = '玩家二';
+        document.getElementById('gameMode').textContent = `🌐 联机 · ${code}`;
+        mode = 'online';
+        resetGame();
+        showScreen('sGame');
+        listenGame(code);
+      }
+    });
+  }catch(e){
+    document.getElementById('btnCreate').disabled  = false;
+    document.getElementById('createMsg').textContent = '❌ 创建失败：' + e.message;
+  }
+}
+
+/* 加入房间 */
+async function joinRoom(){
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if(code.length !== 6){
+    document.getElementById('joinMsg').textContent = '请输入 6 位房间码';
+    return;
+  }
+  document.getElementById('joinMsg').textContent  = '连接中…';
+  document.getElementById('btnJoin').disabled     = true;
+  try{
+    const ref  = doc(db,'rooms',code);
+    const snap = await getDoc(ref);
+    if(!snap.exists()){
+      document.getElementById('joinMsg').textContent = '❌ 房间不存在';
+      document.getElementById('btnJoin').disabled    = false;
+      return;
+    }
+    const d = snap.data();
+    if(d.status !== 'waiting'){
+      document.getElementById('joinMsg').textContent = '❌ 房间已满或游戏已开始';
+      document.getElementById('btnJoin').disabled    = false;
+      return;
+    }
+    roomId = code; myRole = 1;
+    await updateDoc(ref,{ g:getPid(), status:'playing' });
+
+    document.getElementById('pname0').textContent  = '玩家一';
+    document.getElementById('pname1').textContent  = '玩家二（我）';
+    document.getElementById('gameMode').textContent = `🌐 联机 · ${code}`;
+    mode = 'online';
+    resetGame();
+    showScreen('sGame');
+    listenGame(code);
+  }catch(e){
+    document.getElementById('joinMsg').textContent = '❌ ' + e.message;
+    document.getElementById('btnJoin').disabled    = false;
+  }
+}
+
+/* 监听 Firestore 游戏状态（对手更新后同步到本地）*/
+function listenGame(code){
+  if(unsub){ unsub(); unsub = null; }
+  unsub = onSnapshot(doc(db,'rooms',code), snap => {
+    const d = snap.data(); if(!d) return;
+    G.pos = d.pos; G.cur = d.cur; G.over = d.over;
+    if(d.roll) document.getElementById('dice').textContent = DICE_FACES[d.roll - 1];
+    refresh();
+    if(G.over) document.getElementById('rollBtn').disabled = true;
+  });
+}
+
+/* 将本地状态推送到 Firestore */
+async function pushState(rollVal){
+  await updateDoc(doc(db,'rooms',roomId),{
+    pos:G.pos, cur:G.cur, over:G.over, roll:rollVal
+  });
+}
+
+/* ════════════════════════════════
+   棋盘渲染（逻辑与原版完全一致）
+════════════════════════════════ */
+function sqToGrid(n){
+  const rb = Math.floor((n-1)/10);
+  const c  = rb%2===0 ? (n-1)%10 : 9-(n-1)%10;
+  return {r:9-rb, c};
+}
+function center(n){
+  const {r,c} = sqToGrid(n);
+  return {x:c*CS+CS/2, y:r*CS+CS/2};
+}
+
+function buildBoard(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  for(let r=0;r<10;r++){
+    for(let c=0;c<10;c++){
+      const rb = 9-r;
+      const n  = rb%2===0 ? rb*10+c+1 : rb*10+10-c;
+      let cls  = 'cell '+((r+c)%2===0?'ev':'od');
+      let html = `<div class="n">${n}</div>`;
+      if(n===100){        cls+=' fc'; html+='<div class="ico">🏆</div><div class="sub">终　点</div>';
+      }else if(n===1){    cls+=' sc'; html+='<div class="ico">🚩</div><div class="sub">起　点</div>';
+      }else if(LADDERS[n]){cls+=' ls'; html+=`<div class="ico">🪜</div><div class="lbl">↑ ${LADDERS[n]}</div>`;
+      }else if(SNAKES[n]){ cls+=' ss'; html+=`<div class="ico">🐍</div><div class="lbl">↓ ${SNAKES[n]}</div>`;}
+      const cell = document.createElement('div');
+      cell.className = cls; cell.id = 'sq'+n; cell.innerHTML = html;
+      board.appendChild(cell);
+    }
+  }
+  drawSVG();
+}
+
+function drawSVG(){
+  const svg = document.getElementById('svg'); svg.innerHTML = '';
+  for(const[f,t] of Object.entries(LADDERS)) ladderSVG(svg, center(+f), center(+t));
+  for(const[f,t] of Object.entries(SNAKES))  snakeSVG(svg,  center(+f), center(+t));
+}
+function svgEl(tag,attrs){
+  const e = document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const[k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+  return e;
+}
+function ladderSVG(svg,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+  const px=-dy/len*7,py=dx/len*7;
+  const g=svgEl('g',{opacity:.6});
+  for(const s of[-1,1])
+    g.appendChild(svgEl('line',{x1:a.x+px*s,y1:a.y+py*s,x2:b.x+px*s,y2:b.y+py*s,
+      stroke:'#4ade80','stroke-width':2.5,'stroke-linecap':'round'}));
+  const rn=Math.max(2,Math.floor(len/22));
+  for(let i=1;i<rn;i++){
+    const t=i/rn,mx=a.x+dx*t,my=a.y+dy*t;
+    g.appendChild(svgEl('line',{x1:mx+px,y1:my+py,x2:mx-px,y2:my-py,stroke:'#4ade80','stroke-width':2}));
+  }
+  svg.appendChild(g);
+}
+function snakeSVG(svg,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+  const px=-dy/len,py=dx/len,amp=13,segs=Math.max(14,Math.floor(len/12));
+  let d=`M${a.x.toFixed(1)} ${a.y.toFixed(1)}`;
+  for(let i=1;i<=segs;i++){
+    const t=i/segs,w=amp*Math.sin(t*Math.PI*3.5);
+    d+=` L${(a.x+dx*t+px*w).toFixed(1)} ${(a.y+dy*t+py*w).toFixed(1)}`;
+  }
+  svg.appendChild(svgEl('path',{d,stroke:'#f87171','stroke-width':4,fill:'none',
+    opacity:.68,'stroke-linecap':'round','stroke-linejoin':'round'}));
+  svg.appendChild(svgEl('circle',{cx:b.x,cy:b.y,r:5,fill:'#f87171',opacity:.85}));
+}
+
+/* ════════════════════════════════
+   游戏逻辑（与原版一致，扩展了模式感知）
+════════════════════════════════ */
+function refresh(){
+  const nm = [
+    document.getElementById('pname0').textContent,
+    document.getElementById('pname1').textContent
+  ];
+  for(let i=0;i<2;i++){
+    document.getElementById('p'+i).textContent = G.pos[i]===0 ? '起点' : G.pos[i];
+    document.getElementById('c'+i).classList.toggle('active', i===G.cur && !G.over);
+  }
+  document.querySelectorAll('.tok').forEach(t=>t.remove());
+  for(let i=0;i<2;i++){
+    if(G.pos[i]>0){
+      const cell = document.getElementById('sq'+G.pos[i]);
+      if(cell){
+        const t = document.createElement('div');
+        t.className = `tok tok${i+1}`; t.textContent = i+1;
+        cell.appendChild(t);
+      }
+    }
+  }
+  document.getElementById('turnTxt').textContent =
+    G.over ? '游戏结束！' : `轮到：${nm[G.cur]}`;
+
+  // 联机：只有轮到自己才能掷；单机：AI 回合禁用按钮
+  const btn = document.getElementById('rollBtn');
+  btn.disabled = mode==='online'
+    ? G.over || G.cur!==myRole || rolling
+    : G.over || rolling;
+}
+
+function addLog(msg, cls='lm'){
+  const log = document.getElementById('log');
+  const d   = document.createElement('div');
+  d.className = 'le '+cls; d.textContent = msg;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  const es = log.querySelectorAll('.le');
+  if(es.length>35) es[0].remove();
+}
+
+function rollDice(){
+  if(G.over || rolling) return;
+  if(mode==='online' && G.cur!==myRole) return;
+  rolling = true;
+  document.getElementById('rollBtn').disabled = true;
+  let i=0;
+  const id = setInterval(()=>{
+    document.getElementById('dice').textContent = DICE_FACES[Math.floor(Math.random()*6)];
+    if(++i>=10){
+      clearInterval(id);
+      const v = Math.floor(Math.random()*6)+1;
+      document.getElementById('dice').textContent = DICE_FACES[v-1];
+      doMove(v);
+    }
+  },70);
+}
+
+function doMove(v){
+  const cur  = G.cur;
+  const nm   = [document.getElementById('pname0').textContent,
+                document.getElementById('pname1').textContent];
+  const name = nm[cur];
+  let pos    = G.pos[cur]+v;
+
+  if(pos>100){
+    addLog(`${name} 掷出 ${v}，超过终点，留在 ${G.pos[cur]}。`);
+    G.cur = 1-cur; rolling = false;
+    if(mode==='online') pushState(v).catch(console.error);
+    refresh();
+    if(mode==='local' && G.cur===1) setTimeout(aiRoll, 1300);
+    return;
+  }
+
+  addLog(`${name} 掷出 ${v}，前进至第 ${pos} 格。`);
+  G.pos[cur] = pos; refresh();
+
+  setTimeout(async ()=>{
+    if(LADDERS[pos]){
+      const to = LADDERS[pos];
+      addLog(`🪜 梯子！${name} 从 ${pos} 升至 ${to}！`,'ll');
+      G.pos[cur]=to; pos=to; refresh();
+    }else if(SNAKES[pos]){
+      const to = SNAKES[pos];
+      addLog(`🐍 被蛇咬！${name} 从 ${pos} 滑落至 ${to}！`,'ls-log');
+      G.pos[cur]=to; pos=to; refresh();
+    }
+
+    if(G.pos[cur]===100){
+      addLog(`🏆 ${name} 抵达终点，获得胜利！`,'lw');
+      G.over=true; rolling=false;
+      document.getElementById('rollBtn').disabled=true;
+      if(mode==='online') await pushState(v).catch(console.error);
+      refresh(); return;
+    }
+
+    G.cur = 1-cur; rolling = false;
+    if(mode==='online'){
+      await pushState(v).catch(console.error);
+      refresh();
+    }else{
+      refresh();
+      if(G.cur===1) setTimeout(aiRoll, 1300);
+    }
+  },550);
+}
+
+/* AI 自动掷骰 */
+function aiRoll(){
+  if(G.over || G.cur!==1 || mode!=='local') return;
+  rolling = true;
+  const v = Math.floor(Math.random()*6)+1;
+  document.getElementById('dice').textContent = DICE_FACES[v-1];
+  doMove(v);
+}
+
+function resetGame(){
+  G = {pos:[0,0], cur:0, over:false}; rolling = false;
+  document.getElementById('dice').textContent   = '🎲';
+  document.getElementById('rollBtn').disabled   = false;
+  document.getElementById('log').innerHTML      = '<h4>游戏记录</h4>';
+  addLog('游戏开始！玩家一先掷骰。');
+  refresh();
+  // 联机模式也同步重置远端状态
+  if(mode==='online' && roomId)
+    updateDoc(doc(db,'rooms',roomId),{pos:[0,0],cur:0,over:false,roll:0}).catch(console.error);
+}
+
+/* ════════════════════════════════
+   事件绑定
+════════════════════════════════ */
+document.getElementById('btnLocal').addEventListener('click', startLocal);
+
+document.getElementById('btnOnline').addEventListener('click', ()=>{
+  if(unsub){ unsub(); unsub=null; }
+  document.getElementById('waitBox').classList.add('hidden');
+  document.getElementById('btnCreate').disabled  = false;
+  document.getElementById('codeInput').value     = '';
+  document.getElementById('joinMsg').textContent = '';
+  document.getElementById('btnJoin').disabled    = false;
+  document.getElementById('createMsg').textContent = '';
+  showScreen('sLobby');
+});
+
+document.getElementById('btnCreate').addEventListener('click', createRoom);
+document.getElementById('btnJoin').addEventListener('click', joinRoom);
+
+/* 房间码输入框：自动大写、回车触发加入 */
+document.getElementById('codeInput').addEventListener('input', function(){
+  this.value = this.value.toUpperCase();
+});
+document.getElementById('codeInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') joinRoom();
+});
+
+/* 点击房间码复制到剪贴板 */
+document.getElementById('codeShow').addEventListener('click', function(){
+  if(this.textContent === '------') return;
+  navigator.clipboard.writeText(this.textContent).then(()=>{
+    const orig = this.textContent;
+    this.textContent = '已复制 ✓';
+    setTimeout(()=>{ this.textContent = orig; }, 1500);
+  }).catch(()=>{});
+});
+
+document.getElementById('btnBackMenu').addEventListener('click', ()=>{
+  if(unsub){ unsub(); unsub=null; }
+  showScreen('sMenu');
+});
+
+document.getElementById('btnBackGame').addEventListener('click', ()=>{
+  if(unsub){ unsub(); unsub=null; }
+  showScreen(mode==='online' ? 'sLobby' : 'sMenu');
+});
+
+document.getElementById('rollBtn').addEventListener('click', rollDice);
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+/* ── 初始化 ── */
+buildBoard();
+showScreen('sMenu');
+</script>
+</body>
+</html>
