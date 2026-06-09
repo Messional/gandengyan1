@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grover Daily Planner</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f5f5f3;
+    --surface2: #ebebea;
+    --border: #e0e0de;
+    --border2: #ccccca;
+    --text: #111111;
+    --text2: #444444;
+    --text3: #999999;
+    --accent: #1a6ef5;
+    --accent-dim: rgba(26,110,245,0.06);
+    --accent-dim2: rgba(26,110,245,0.12);
+    --red: #d63b3b;
+    --blue: #1a6ef5;
+    --amber: #c47a10;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); font-family: 'Inter', 'PingFang SC', 'Helvetica Neue', sans-serif; font-size: 15px; line-height: 1.65; }
+  body { max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .header { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  .header-top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .logo { font-size: 12px; color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+  .date-display { font-size: 12px; color: var(--text3); }
+  .title { font-size: 24px; font-weight: 700; color: var(--text); margin-top: 10px; letter-spacing: -0.03em; }
+  .subtitle { font-size: 14px; color: var(--text3); margin-top: 4px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  .field-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.10em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  .field-label::before { content: ''; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+
+  select, textarea, input[type="text"] {
+    width: 100%; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: inherit; font-size: 15px; resize: none;
+    appearance: none; -webkit-appearance: none;
+    cursor: pointer;
+  }
+  select option { background: #fff; color: var(--text); }
+  textarea { cursor: text; line-height: 1.65; }
+  select:focus, textarea:focus { color: var(--text); }
+
+  .section-head { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.12em; margin: 1.75rem 0 10px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  .section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tog {
+    font-size: 13px; padding: 6px 14px; border-radius: 4px;
+    border: 1px solid var(--border2); background: var(--surface);
+    color: var(--text2); cursor: pointer; transition: all 0.12s; user-select: none;
+    font-family: inherit; font-weight: 500;
+  }
+  .tog:hover { border-color: var(--text3); color: var(--text2); }
+  .tog.on { background: var(--accent-dim2); border-color: var(--accent); color: var(--accent); }
+
+  .gen-btn {
+    margin-top: 1.75rem; width: 100%; padding: 14px;
+    background: var(--accent); color: #ffffff;
+    border: none; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 700; font-family: inherit;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .gen-btn:hover { opacity: 0.88; }
+  .gen-btn:active { transform: scale(0.99); }
+  .gen-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .copy-btn {
+    margin-top: 10px; width: 100%; padding: 10px;
+    background: transparent; color: var(--text2);
+    border: 1px solid var(--border2); border-radius: 6px; cursor: pointer;
+    font-size: 12px; font-family: inherit; letter-spacing: 0.05em;
+    transition: all 0.12s;
+  }
+  .copy-btn:hover { border-color: var(--text2); color: var(--text); }
+  .copy-btn.copied { border-color: var(--accent); color: var(--accent); }
+
+  .output-wrap { display: none; margin-top: 2rem; }
+  .output-wrap.visible { display: block; }
+  .output-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .output-tag { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.14em; }
+  .output-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.5rem;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12.5px;
+    line-height: 1.8; color: var(--text2);
+    white-space: pre-wrap; word-break: break-word;
+    min-height: 80px;
+  }
+  .output-box .loading { color: var(--text3); font-style: italic; }
+
+  .ticker { display: flex; gap: 16px; margin-top: 1rem; flex-wrap: wrap; }
+  .tick-item { font-size: 12px; color: var(--text3); font-weight: 500; }
+  .tick-item span { color: var(--accent); font-weight: 600; }
+
+  /* markdown-ish rendering */
+  .rendered { white-space: normal; }
+  .rendered h2 { font-size: 13px; color: var(--accent); font-family: inherit; font-weight: 700; margin: 1.25rem 0 8px; letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+  .rendered h2:first-child { margin-top: 0; }
+  .rendered p { color: var(--text2); margin-bottom: 8px; line-height: 1.75; font-size: 15px; }
+  .rendered table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }
+  .rendered th { color: var(--text3); text-transform: uppercase; font-size: 11px; letter-spacing: 0.08em; border-bottom: 1px solid var(--border2); padding: 6px 10px; text-align: left; font-weight: 600; }
+  .rendered td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; font-size: 14px; }
+  .rendered td:first-child { color: var(--text3); white-space: nowrap; font-size: 13px; font-weight: 500; }
+  .rendered strong { color: var(--text); font-weight: 600; }
+  .rendered li { margin-left: 16px; margin-bottom: 4px; color: var(--text2); font-size: 15px; }
+  .rendered ul { margin: 6px 0 10px; }
+  .highlight-row td { background: var(--accent-dim); }
+  .rendered .focus-block { background: var(--accent-dim); border-left: 2px solid var(--accent); padding: 10px 14px; border-radius: 0 4px 4px 0; margin: 10px 0; font-size: 15px; }
+  .rendered .risk-block { background: rgba(214,59,59,0.05); border-left: 2px solid var(--red); padding: 10px 14px; border-radius: 0 4px 4px 0; margin: 10px 0; color: var(--text2); font-size: 15px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <span class="logo">Grover / Daily Planning System</span>
+    <span class="date-display" id="date-display"></span>
+  </div>
+  <div class="title">今日计划生成器</div>
+  <div class="subtitle">填入当天变量，生成可执行日程</div>
+  <div class="ticker">
+    <div class="tick-item">TSLA <span>HOLD</span></div>
+    <div class="tick-item">CRCL <span>HOLD</span></div>
+    <div class="tick-item">491 Bridging <span>ACTIVE</span></div>
+    <div class="tick-item">Kaplan <span>SEM 1</span></div>
+  </div>
+</div>
+
+<div class="section-head">基本状态</div>
+<div class="field" style="margin-bottom:12px;">
+  <div class="field-label">计划模式</div>
+  <div class="toggle-group">
+    <span class="tog" id="mode-today" onclick="setMode('today')">今天</span>
+    <span class="tog on" id="mode-tomorrow" onclick="setMode('tomorrow')">明天（提前规划）</span>
+  </div>
+</div>
+<div class="grid">
+  <div class="field">
+    <div class="field-label" id="weekday-label">明天是</div>
+    <select id="weekday">
+      <option>周一</option><option>周二</option><option>周三</option>
+      <option>周四</option><option>周五</option><option>周六</option><option>周日</option>
+    </select>
+  </div>
+  <div class="field">
+    <div class="field-label" id="energy-label">预计精力</div>
+    <select id="energy">
+      <option value="high">充沛 — 可以高强度</option>
+      <option value="mid" selected>一般 — 正常节奏</option>
+      <option value="low">疲惫 — 轻量为主</option>
+    </select>
+  </div>
+</div>
+
+<div class="section-head">Kaplan 进度</div>
+<div class="grid">
+  <div class="field">
+    <div class="field-label">当前 Week</div>
+    <select id="kweek">
+      <option>Week 6</option><option>Week 7</option><option>Week 8</option>
+      <option>Week 9</option><option>Week 10</option><option>Week 11</option>
+    </select>
+  </div>
+  <div class="field">
+    <div class="field-label" id="kgoal-label">明日 Kaplan 目标</div>
+    <select id="kgoal">
+      <option value="new">看新章节内容</option>
+      <option value="review">复习 + 练习题</option>
+      <option value="assign">完成 Assignment</option>
+      <option value="light">轻量浏览，保持感觉</option>
+      <option value="skip">今天不做 Kaplan</option>
+    </select>
+  </div>
+</div>
+
+<div class="section-head" id="modules-head">明日要做的模块</div>
+<div class="field" style="margin-bottom:12px;">
+  <div class="toggle-group" id="modules">
+    <span class="tog on" data-val="gym">健身</span>
+    <span class="tog on" data-val="kaplan">Kaplan</span>
+    <span class="tog on" data-val="create">创作（游戏/写作）</span>
+    <span class="tog" data-val="job">投简历 / 求职</span>
+    <span class="tog" data-val="read">阅读</span>
+    <span class="tog" data-val="social">社交安排</span>
+    <span class="tog" data-val="admin">杂务 / 行政</span>
+    <span class="tog" data-val="invest">投资研究</span>
+  </div>
+</div>
+
+<div class="section-head" id="must-head">明日必须完成</div>
+<div class="field" style="margin-bottom:12px;">
+  <div class="field-label">硬性待办（每行一项，必须完成）</div>
+  <textarea id="must" rows="3" placeholder="例如：完成 Kaplan week 7 练习题&#10;投 2 份 paraplanning 简历&#10;处理某项行政事务"></textarea>
+</div>
+
+<div class="section-head" id="optional-head">明日可选完成</div>
+<div class="field" style="margin-bottom:12px;">
+  <div class="field-label">弹性待办（有时间精力再做）</div>
+  <textarea id="optional" rows="2" placeholder="例如：推进游戏新功能&#10;更新公众号草稿"></textarea>
+</div>
+
+<div class="section-head">补充说明</div>
+<div class="field" style="margin-bottom:12px;">
+  <div class="field-label">特殊情况 / 时间限制 / 当天想法</div>
+  <textarea id="notes" rows="2" placeholder="例如：明天有约、预计某个时段有空、想集中做某件事"></textarea>
+</div>
+
+<button class="gen-btn" id="gen-btn" onclick="generate()">生成明日计划</button>
+
+<div class="output-wrap" id="output-wrap">
+  <div class="output-head">
+    <span class="output-tag">// Plan Output</span>
+  </div>
+  <div class="output-box" id="output-box"><span class="loading">正在生成...</span></div>
+  <button class="copy-btn" id="copy-btn" onclick="copyOutput()">复制计划文本</button>
+</div>
+
+<script>
+  const days = ['周日','周一','周二','周三','周四','周五','周六'];
+  const now = new Date();
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+
+  document.getElementById('date-display').textContent =
+    now.getFullYear() + '.' +
+    String(now.getMonth()+1).padStart(2,'0') + '.' +
+    String(now.getDate()).padStart(2,'0') + '  ' +
+    days[now.getDay()];
+
+  let currentMode = 'tomorrow';
+
+  function setMode(mode) {
+    currentMode = mode;
+    const isTomorrow = mode === 'tomorrow';
+    document.getElementById('mode-today').classList.toggle('on', !isTomorrow);
+    document.getElementById('mode-tomorrow').classList.toggle('on', isTomorrow);
+
+    const prefix = isTomorrow ? '明' : '今';
+    document.getElementById('weekday-label').textContent = isTomorrow ? '明天是' : '今天是';
+    document.getElementById('energy-label').textContent = isTomorrow ? '预计精力' : '精力状态';
+    document.getElementById('kgoal-label').textContent = prefix + '日 Kaplan 目标';
+    document.getElementById('modules-head').textContent = prefix + '日要做的模块';
+    document.getElementById('must-head').textContent = prefix + '日必须完成';
+    document.getElementById('optional-head').textContent = prefix + '日可选完成';
+    document.getElementById('gen-btn').textContent = '生成' + prefix + '日计划';
+
+    const ref = isTomorrow ? tomorrow : now;
+    const sel = document.getElementById('weekday');
+    sel.selectedIndex = ref.getDay() === 0 ? 6 : ref.getDay() - 1;
+  }
+
+  // Init: default to tomorrow mode
+  setMode('tomorrow');
+
+  // Toggles (exclude mode buttons, they have their own onclick)
+  document.querySelectorAll('#modules .tog').forEach(t => {
+    t.addEventListener('click', () => t.classList.toggle('on'));
+  });
+
+  function getModules() {
+    return [...document.querySelectorAll('#modules .tog.on')].map(t => t.dataset.val);
+  }
+
+  let lastOutputText = '';
+
+  async function generate() {
+    const btn = document.getElementById('gen-btn');
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+
+    const isTomorrow = currentMode === 'tomorrow';
+    const weekday = document.getElementById('weekday').value;
+    const energy = document.getElementById('energy').value;
+    const kweek = document.getElementById('kweek').value;
+    const kgoal = document.getElementById('kgoal').value;
+    const modules = getModules();
+    const must = document.getElementById('must').value.trim();
+    const optional = document.getElementById('optional').value.trim();
+    const notes = document.getElementById('notes').value.trim();
+
+    const energyLabel = { high: '充沛', mid: '一般', low: '疲惫' }[energy];
+    const kgoalLabel = { new: '看新章节内容', review: '复习+练习题', assign: '完成Assignment', light: '轻量浏览', skip: '今天跳过' }[kgoal];
+    const dayLabel = isTomorrow ? '明天' : '今天';
+
+    const userPrompt =
+      `${dayLabel}：${weekday}，预计精力：${energyLabel}。` +
+      `\nKaplan进度：${kweek}，${dayLabel}目标：${kgoalLabel}。` +
+      `\n${dayLabel}要做的模块：${modules.join(', ') || '未选择'}。` +
+      (must ? `\n必须完成：\n${must}` : '') +
+      (optional ? `\n可选完成：\n${optional}` : '') +
+      (notes ? `\n补充说明：${notes}` : '') +
+      (isTomorrow ? '\n\n这是提前为明天做的计划，请以明天的视角规划，语气用"明天"。' : '');
+
+    const wrap = document.getElementById('output-wrap');
+    const box = document.getElementById('output-box');
+    wrap.classList.add('visible');
+    box.innerHTML = '<span class="loading">正在生成计划...</span>';
+    box.className = 'output-box';
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: `You are Grover's personal daily planner. Grover is 28, based in Canberra, Australia. Context: 491 bridging visa (expected 491 grant Aug 2026, 191 application 2029), studying Kaplan financial planning (8 courses, semester 1, two courses end July 22), building HTML games (Gomoku, card games), writing Chinese creative fiction and financial WeChat content, holds TSLA and CRCL. Background: ANU Master of Finance, 3 years retail banking.
+
+Productivity rules:
+- Must leave home to work effectively; library is best
+- Gym works best in the morning before library
+- Task-switching prevents fatigue; no more than 90 min on one thing
+- Reading needs a screen-free period (e.g. cafe without laptop)
+- Easily influenced by environment; needs external structure
+
+When planning for tomorrow (提前规划), use future tense — phrase everything as preparation and intention, e.g. "明天先去健身房..." rather than present tense. Add a brief "今晚准备" section at the end with 1-2 things to set up tonight.
+
+Output format — use this exact markdown structure:
+
+**【计划概览】**
+One sentence summarizing the day's rhythm and priority.
+
+**【时间安排】**
+| 时间 | 事项 | 具体内容 |
+|------|------|--------|
+(Each row: specific time slot, activity name, 1-2 sentences of what exactly to do. Include short breaks. Be specific, not generic. Gym slot should be morning. Library blocks for Kaplan/work. Screen-free slot for reading if selected.)
+
+**【核心重点】**
+The single most important thing and why.
+
+**【风险提示】**
+The one most likely failure point and how to handle it.
+
+**【今晚准备】**
+(Only when planning for tomorrow) 1-2 concrete things to prepare tonight.
+
+Be direct and specific. No filler. Match intensity to energy level. Write in Chinese.`,
+          messages: [{ role: 'user', content: userPrompt }]
+        })
+      });
+
+      const data = await resp.json();
+      const text = (data.content || []).map(i => i.text || '').join('');
+      lastOutputText = text;
+      renderMarkdown(text, box);
+    } catch(e) {
+      box.innerHTML = '<span class="loading">网络错误，请检查连接后重试。</span>';
+    }
+
+    const prefix = isTomorrow ? '明' : '今';
+    btn.disabled = false;
+    btn.textContent = '重新生成' + prefix + '日计划';
+  }
+
+  function renderMarkdown(text, box) {
+    box.className = 'output-box rendered';
+    let html = text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*【(.+?)】\*\*/g, '<h2>$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n\n/g, '\n')
+      .split('\n');
+
+    let inTable = false;
+    let out = [];
+    let rowIndex = 0;
+
+    for (let i = 0; i < html.length; i++) {
+      const line = html[i];
+      if (line.startsWith('|')) {
+        if (!inTable) { out.push('<table>'); inTable = true; rowIndex = 0; }
+        if (line.includes('---')) continue;
+        const cells = line.split('|').filter(c => c.trim() !== '');
+        if (rowIndex === 0) {
+          out.push('<tr>' + cells.map(c => `<th>${c.trim()}</th>`).join('') + '</tr>');
+        } else {
+          out.push('<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>');
+        }
+        rowIndex++;
+      } else {
+        if (inTable) { out.push('</table>'); inTable = false; }
+        if (line.startsWith('<h2>')) {
+          out.push(line);
+        } else if (line.trim().startsWith('- ')) {
+          if (i === 0 || !html[i-1].trim().startsWith('- ')) out.push('<ul>');
+          out.push(`<li>${line.trim().slice(2)}</li>`);
+          if (i === html.length-1 || !html[i+1].trim().startsWith('- ')) out.push('</ul>');
+        } else if (line.trim()) {
+          if (line.includes('今日重点') || line.includes('重点')) {
+            out.push(`<div class="focus-block">${line}</div>`);
+          } else if (line.includes('风险') || line.includes('注意')) {
+            out.push(`<div class="risk-block">${line}</div>`);
+          } else {
+            out.push(`<p>${line}</p>`);
+          }
+        }
+      }
+    }
+    if (inTable) out.push('</table>');
+    box.innerHTML = out.join('');
+  }
+
+  function copyOutput() {
+    if (!lastOutputText) return;
+    navigator.clipboard.writeText(lastOutputText).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '已复制';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '复制计划文本';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
